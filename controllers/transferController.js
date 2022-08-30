@@ -1,6 +1,7 @@
 import fs from "fs";
 
 export const getTransfer = (req, res) => {
+  console.time("test");
   const jsonFile = fs.readFileSync("data/order.json", "utf8");
   const jsonData = JSON.parse(jsonFile);
 
@@ -31,6 +32,7 @@ export const getTransfer = (req, res) => {
 
       if (startOrderMsg.test(log)) {
         json = { type: "Start", ...json };
+
         return json;
       } else if (insertOrderProductArrMsg.test(log)) {
         const productIds = log
@@ -40,15 +42,21 @@ export const getTransfer = (req, res) => {
         let jsonArr = [];
 
         for (const productId of productIds) {
-          jsonArr = [
-            ...jsonArr,
-            {
-              type: "Insert Into Order List",
-              ...json,
-              productId,
-              status: "Delivery Start",
-            },
-          ];
+          //   jsonArr = [
+          //     ...jsonArr,
+          //     {
+          //       type: "Insert Into Order List",
+          //       ...json,
+          //       productId,
+          //       status: "Delivery Start",
+          //     },
+          //   ];
+          jsonArr = jsonArr.concat({
+            type: "Insert Into Order List",
+            ...json,
+            productId,
+            status: "Delivery Start",
+          });
         }
 
         return jsonArr;
@@ -92,7 +100,6 @@ export const getTransfer = (req, res) => {
         json = {
           type: "SettlePrice",
           ...json,
-          status: "None",
         };
 
         return json;
@@ -108,7 +115,6 @@ export const getTransfer = (req, res) => {
         json = {
           type: "Paid",
           ...json,
-          status: "None",
         };
 
         return json;
@@ -120,11 +126,13 @@ export const getTransfer = (req, res) => {
       }
     });
 
-    logArr = [...logArr, ...log];
+    // logArr = [...logArr, ...log];
+    logArr = logArr.concat(log);
   }
 
-  //위에서 arr.flat() 해보기
   logArr = logArr.flat();
+
+  console.timeEnd("test");
 
   res.render("transfer", {
     logs: logArr,
