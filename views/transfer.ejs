@@ -1,0 +1,45 @@
+<html>
+  <head> 
+    <title>Transfer</title>
+    <style>
+      table {
+        width: 100%;
+        border-top: 1px solid #444444;
+        border-collapse: collapse;
+      }
+      th, td {
+        border-bottom: 1px solid #444444;
+        border-left: 1px solid #444444;
+        padding: 10px;
+      }
+      th:first-child, td:first-child {
+        border-left: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Transfer</h1>
+    <table>
+      <th>orderId</th>
+      <th>productId</th>
+      <th>시간</th>
+      <th>로그타입</th>
+      <th>배송상태</th>
+      <th>특이사항</th>
+        <% for(let i=0;i<logs.length;i++){ %>
+          <tr>
+            <% if (logs[i] !== null) {%>
+              <td><%= logs[i].id %></td>
+              <td><%= logs[i].productId %></td>
+              <td><%= logs[i].date %></td>
+              <td><%= logs[i].type %></td>
+              <td><%= logs[i].status %></td>
+              <td></td>
+            <% }%>
+          </tr>
+        <% } %>
+
+    </table>
+
+  </body>
+</html>
