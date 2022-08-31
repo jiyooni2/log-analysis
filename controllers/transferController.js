@@ -2,13 +2,14 @@ import fs from "fs";
 
 export const getTransfer = (req, res) => {
   console.time("test");
+
   const jsonFile = fs.readFileSync("data/order.json", "utf8");
   const jsonData = JSON.parse(jsonFile);
 
   const key = Object.keys(jsonData);
   const logs = jsonData[key];
 
-  let logArr = [];
+  let resLog = [];
 
   //log types
   const dateRegex = new RegExp(/\[[0-9-: ]*\]/g);
@@ -21,6 +22,15 @@ export const getTransfer = (req, res) => {
   const completePurchaseMsg = new RegExp("complete purchase");
   const paidMsg = new RegExp("Paid");
 
+  const getProductId = (log) => {
+    return log.match(/orderProductId\([0-9, ]*\)/)[0].match(/\d+/g);
+  };
+
+  const makeJson = (basicJson, type, status, productId) => {
+    const json = { ...basicJson, type, status, productId };
+    return json;
+  };
+
   for (const { id, orderLog } of logs) {
     let log = orderLog.split("\n").filter((log) => log.length !== 0);
 
@@ -31,110 +41,79 @@ export const getTransfer = (req, res) => {
       };
 
       if (startOrderMsg.test(log)) {
-        json = { type: "Start", ...json };
+        json = makeJson(json, "Start");
 
         return json;
       } else if (insertOrderProductArrMsg.test(log)) {
-        const productIds = log
-          .match(/orderProductId\([0-9,]*\)/)[0]
-          .match(/\d+/g);
+        const productIds = getProductId(log);
 
         let jsonArr = [];
 
         for (const productId of productIds) {
-          //   jsonArr = [
-          //     ...jsonArr,
-          //     {
-          //       type: "Insert Into Order List",
-          //       ...json,
-          //       productId,
-          //       status: "Delivery Start",
-          //     },
-          //   ];
-          jsonArr = jsonArr.concat({
-            type: "Insert Into Order List",
-            ...json,
-            productId,
-            status: "Delivery Start",
-          });
+          jsonArr = jsonArr.concat(
+            makeJson(
+              json,
+              "Insert Into Order List",
+              "Delivery Start",
+              productId
+            )
+          );
         }
 
         return jsonArr;
       } else if (changeOrderStatusMsg.test(log)) {
-        const productId = log
-          .match(/orderProductId\([0-9,]*\)/)[0]
-          .match(/\d+/g);
+        const productId = getProductId(log);
 
         const status = log.match(/[A-Z][0-9]/g)[0];
 
-        json = {
-          type: "Change OrderStatus",
-          productId,
-          status,
-          ...json,
-        };
+        json = makeJson(json, "Change OrderStatus", status, productId);
 
         return json;
       } else if (cancelMsg.test(log)) {
-        const productId = log
-          .match(/orderProductId\([0-9, ]*\)/)[0]
-          .match(/\d+/g);
+        const productIds = getProductId(log);
 
-        json = {
-          type: "Cancelled",
-          productId,
-          ...json,
-          status: "Cancelled",
-        };
+        let jsonArr = [];
 
-        return json;
+        for (const productId of productIds) {
+          jsonArr = jsonArr.concat(
+            makeJson(json, "Cancel", "Cancelled", productId)
+          );
+        }
+
+        return jsonArr;
       } else if (terminateMsg.test(log)) {
-        json = {
-          type: "Terminate",
-          ...json,
-          status: "Terminate",
-        };
+        json = makeJson(json, "Terminate", "Terminated");
 
         return json;
       } else if (settlePriceMsg.test(log)) {
-        json = {
-          type: "SettlePrice",
-          ...json,
-        };
+        json = makeJson(json, "SettlePrice");
 
         return json;
       } else if (completePurchaseMsg.test(log)) {
-        json = {
-          type: "Complete Purchase",
-          ...json,
-          status: "Complete Purchase",
-        };
+        json = makeJson(json, "Complete Purchase", "Purchased");
 
         return json;
       } else if (paidMsg.test(log)) {
-        json = {
-          type: "Paid",
-          ...json,
-        };
+        json = makeJson(json, "Paid");
 
         return json;
       } else {
-        const json = { type: "Error" };
+        json = makeJson(json, "Exception");
         console.log(log);
         // return json;
         return null;
       }
     });
 
-    // logArr = [...logArr, ...log];
-    logArr = logArr.concat(log);
+    // resLog = [...resLog, ...log];
+    resLog = resLog.concat(log);
   }
 
-  logArr = logArr.flat();
+  resLog = resLog.flat();
 
   console.timeEnd("test");
 
   res.render("transfer", {
-    logs: logArr,
+    logs: resLog,
   });
 };
